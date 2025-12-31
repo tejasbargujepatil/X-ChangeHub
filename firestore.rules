@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if only specific fields are being updated (for skill exchange rewards)
+    function isUpdatingExchangeFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['xp', 'level', 'averageRating', 'totalRatings', 'completedExchanges']);
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if true; // Public profiles (needed for username check during signup)
+      allow create: if isOwner(userId);
+      
+      // Allow owner to update their own profile
+      // OR allow any authenticated user to update XP/rating fields (for skill exchanges)
+      allow update: if isOwner(userId) || 
+                      (isAuthenticated() && isUpdatingExchangeFields());
+      
+      allow delete: if isOwner(userId);
+    }
+    
+    // Skill exchanges
+    match /skill_exchanges/{exchangeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.requesterId == request.auth.uid || 
+        resource.data.teacherId == request.auth.uid
+      );
+      allow delete: if isAuthenticated() && (
+        resource.data.requesterId == request.auth.uid || 
+        resource.data.teacherId == request.auth.uid
+      );
+    }
+    
+    // Freelance projects
+    match /freelance_projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.clientId == request.auth.uid || 
+        resource.data.assignedToId == request.auth.uid
+      );
+      allow delete: if isAuthenticated() && 
+        resource.data.clientId == request.auth.uid;
+    }
+    
+    // Portfolio items
+    match /portfolio/{itemId} {
+      allow read: if true; // Public portfolios
+      allow create, update, delete: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+    }
+  }
+}

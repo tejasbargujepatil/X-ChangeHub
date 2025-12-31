@@ -1,0 +1,83 @@
+{
+  "project_info": {
+    "project_number": "1098360809704",
+    "firebase_url": "https://xchangehub-f61be-default-rtdb.firebaseio.com",
+    "project_id": "xchangehub-f61be",
+    "storage_bucket": "xchangehub-f61be.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1098360809704:android:683118e4940e4a8be8415d",
+        "android_client_info": {
+          "package_name": "com.example.xchangehub_flutter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1098360809704-3vd3jaksphhk25dg39f86shm4n19p523.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBDBrISJPedZDogvuHuqNNSLWo58qpEUQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1098360809704-3vd3jaksphhk25dg39f86shm4n19p523.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1098360809704-qcd4gnlmpi5llqkkkljiul77llvk2vg0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.xchangehubFlutter"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1098360809704:android:10d8097f88e1f009e8415d",
+        "android_client_info": {
+          "package_name": "com.xchangehub.xchangehub"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1098360809704-3vd3jaksphhk25dg39f86shm4n19p523.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBDBrISJPedZDogvuHuqNNSLWo58qpEUQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1098360809704-3vd3jaksphhk25dg39f86shm4n19p523.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1098360809704-qcd4gnlmpi5llqkkkljiul77llvk2vg0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.xchangehubFlutter"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
