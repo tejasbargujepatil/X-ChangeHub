@@ -285,24 +285,14 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        // Open Google Meet link
+                        // Always open the default Google Meet link
                         try {
-                          final meetingLink = exchange.meetingLink;
+                          // Default meeting room for all skill exchanges
+                          const defaultMeetLink = 'https://meet.google.com/mqd-mrrv-afq';
                           
-                          if (meetingLink == null || meetingLink.isEmpty) {
-                            throw Exception('No meeting link available');
-                          }
+                          debugPrint('🎥 Opening Google Meet: $defaultMeetLink');
                           
-                          // Ensure the link is a valid URL
-                          String url = meetingLink;
-                          if (!url.startsWith('http')) {
-                            // If it's just a room name, construct Google Meet URL
-                            url = 'https://meet.google.com/$meetingLink';
-                          }
-                          
-                          debugPrint('🎥 Opening Google Meet: $url');
-                          
-                          final uri = Uri.parse(url);
+                          final uri = Uri.parse(defaultMeetLink);
                           if (await canLaunchUrl(uri)) {
                             await launchUrl(
                               uri,

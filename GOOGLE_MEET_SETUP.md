@@ -1,5 +1,13 @@
 # 🎯 Google Meet Integration - Complete Setup Guide
 
+> **⚠️ NOTICE: Simplified Approach Now Used**  
+> **As of January 2026**, we're using a **default shared Google Meet link** instead of Cloud Functions.  
+> **Current link:** `https://meet.google.com/mqd-mrrv-afq`  
+> **See:** `GOOGLE_MEET_LINK_CONFIG.md` for the current implementation.  
+> **This guide (below)** documents the Cloud Function approach for reference only.
+
+---
+
 ## Overview
 
 This guide will help you set up Google Meet integration for XchangeHUb using **hackersdaddy826@gmail.com** as the central meeting host account.

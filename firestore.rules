@@ -10,21 +10,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Check if only specific fields are being updated (for skill exchange rewards)
-    function isUpdatingExchangeFields() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['xp', 'level', 'averageRating', 'totalRatings', 'completedExchanges']);
-    }
-    
     // Users collection
     match /users/{userId} {
       allow read: if true; // Public profiles (needed for username check during signup)
       allow create: if isOwner(userId);
       
       // Allow owner to update their own profile
-      // OR allow any authenticated user to update XP/rating fields (for skill exchanges)
-      allow update: if isOwner(userId) || 
-                      (isAuthenticated() && isUpdatingExchangeFields());
+      // OR allow any authenticated user to update (for skill exchange rewards and other features)
+      allow update: if isOwner(userId) || isAuthenticated();
       
       allow delete: if isOwner(userId);
     }
@@ -43,13 +36,29 @@ service cloud.firestore {
       );
     }
     
+    // Helper function to check if update is only adding current user to applicants
+    function isApplyingToProject() {
+      // Check if only applicantIds is being modified
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['applicantIds']) &&
+             // Check if the new applicantIds includes the current user
+             request.resource.data.applicantIds.hasAll(resource.data.applicantIds) &&
+             // Check if only adding current user (array should grow by 1)
+             request.resource.data.applicantIds.size() == resource.data.applicantIds.size() + 1 &&
+             // Check if the added user is the current user
+             request.resource.data.applicantIds.hasAll([request.auth.uid]);
+    }
+    
     // Freelance projects
     match /freelance_projects/{projectId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (
+        // Project owner can update
         resource.data.clientId == request.auth.uid || 
-        resource.data.assignedToId == request.auth.uid
+        // Assigned freelancer can update
+        resource.data.assignedToId == request.auth.uid ||
+        // Any authenticated user can apply (add themselves to applicantIds)
+        isApplyingToProject()
       );
       allow delete: if isAuthenticated() && 
         resource.data.clientId == request.auth.uid;

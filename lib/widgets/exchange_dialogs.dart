@@ -300,7 +300,12 @@ class _ScheduleExchangeDialogState extends State<ScheduleExchangeDialog> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   int _duration = 60; // minutes
-  final TextEditingController _meetLinkController = TextEditingController();
+  
+  // Default Google Meet link for all exchanges
+  static const String _defaultMeetLink = 'https://meet.google.com/mqd-mrrv-afq';
+  final TextEditingController _meetLinkController = TextEditingController(
+    text: _defaultMeetLink,
+  );
   
   @override
   void dispose() {
@@ -514,8 +519,9 @@ class _ScheduleExchangeDialogState extends State<ScheduleExchangeDialog> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: _meetLinkController,
+                    readOnly: true,
                     decoration: InputDecoration(
-                      hintText: 'Paste Google Meet link here',
+                      hintText: 'Google Meet link',
                       prefixIcon: const Icon(Icons.video_call, color: Color(0xFF4285F4)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -553,7 +559,7 @@ class _ScheduleExchangeDialogState extends State<ScheduleExchangeDialog> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Create a new Google Meet at meet.google.com/new and paste the link here',
+                            'All skill exchanges use this shared Google Meet room. Join at your scheduled time!',
                             style: TextStyle(
                               color: Colors.grey.shade700,
                               fontSize: 12,
