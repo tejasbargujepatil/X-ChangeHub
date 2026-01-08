@@ -4,8 +4,11 @@ import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
 import '../../config/app_config.dart';
 import '../../models/user_model.dart';
+import '../../widgets/notification_icon.dart';
 import '../exchange/find_matches_screen.dart';
 import '../portfolio/leaderboard_screen.dart';
+import '../batch/browse_batches_screen.dart';
+import '../learning_request/browse_requests_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -54,6 +57,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ],
         ),
+        actions: const [
+          NotificationIcon(),
+        ],
         toolbarHeight: 70,
       ),
       body: RefreshIndicator(
@@ -76,7 +82,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
               
               // Trending Skills
               _buildSectionHeader('Trending Skills', onViewAll: () {
-                // Navigate to Find Matches screen to explore all skills
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -205,40 +210,70 @@ class _ExploreScreenState extends State<ExploreScreen> {
       children: [
         _buildSectionHeader('Quick Actions'),
         const SizedBox(height: 12),
-        Row(
+        // Grid layout for better alignment
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.1,
           children: [
-            Expanded(
-              child: _buildActionCard(
-                'Find Match',
-                'Connect with peers',
-                Icons.people_alt,
-                AppTheme.primaryColor,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const FindMatchesScreen(),
-                    ),
-                  );
-                },
-              ),
+            _buildActionCard(
+              'Find Match',
+              'Connect with peers',
+              Icons.people_alt,
+              AppTheme.primaryColor,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FindMatchesScreen(),
+                  ),
+                );
+              },
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                'Leaderboard',
-                'See top learners',
-                Icons.leaderboard,
-                AppTheme.secondaryColor,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const LeaderboardScreen(),
-                    ),
-                  );
-                },
-              ),
+            _buildActionCard(
+              'Leaderboard',
+              'See top learners',
+              Icons.leaderboard,
+              AppTheme.secondaryColor,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LeaderboardScreen(),
+                  ),
+                );
+              },
+            ),
+            _buildActionCard(
+              'Group Batches',
+              'Join group learning',
+              Icons.groups,
+              Colors.purple,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BrowseBatchesScreen(),
+                  ),
+                );
+              },
+            ),
+            _buildActionCard(
+              'Learning Board',
+              'Post or help others',
+              Icons.public,
+              Colors.teal,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BrowseLearningRequestsScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -265,11 +300,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color, borderRadius: BorderRadius.circular(10),
+                color: color,
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: Colors.white, size: 24),
             ),
@@ -279,11 +316,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -353,7 +394,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Find a peer and exchange skills for free',
+                  'Find peers or post on Learning Board',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.white.withOpacity(0.9),
                       ),

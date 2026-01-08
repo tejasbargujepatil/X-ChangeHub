@@ -5,6 +5,8 @@ import '../../config/theme.dart';
 import '../../models/skill_exchange_model.dart';
 import '../../services/skill_exchange_service.dart';
 import '../../widgets/exchange_dialogs.dart';
+import '../learning_request/browse_requests_screen.dart';
+import '../learning_request/post_request_screen.dart';
 
 class ExchangesScreen extends StatefulWidget {
   const ExchangesScreen({super.key});
@@ -20,7 +22,7 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -39,12 +41,43 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
           labelColor: AppTheme.primaryColor,
           unselectedLabelColor: AppTheme.textSecondaryColor,
           indicatorColor: AppTheme.primaryColor,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Active'),
             Tab(text: 'Completed'),
+            Tab(icon: Icon(Icons.public), text: 'Learning Board'),
           ],
         ),
+        actions: [
+          // Show Post button when on Learning Board tab
+          ValueListenableBuilder<int>(
+            valueListenable: _tabController.animation != null
+                ? _TabIndexNotifier(_tabController)
+                : ValueNotifier(0),
+            builder: (context, tabIndex, child) {
+              if (tabIndex == 3) {
+                return IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  tooltip: 'Post Learning Request',
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PostLearningRequestScreen(),
+                      ),
+                    );
+                    if (result == true) {
+                      // Refresh the tab if needed
+                      setState(() {});
+                    }
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
       ),
       body: TabBarView(
         controller: _tabController,
@@ -52,6 +85,7 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
           _buildPendingTab(),
           _buildActiveTab(),
           _buildCompletedTab(),
+          const BrowseLearningRequestsScreen(),
         ],
       ),
     );
@@ -262,8 +296,27 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () {
-                        _exchangeService.rejectExchangeRequest(exchange.id);
+                      onPressed: () async {
+                        try {
+                          await _exchangeService.rejectExchangeRequest(exchange.id);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Exchange declined. ${exchange.requesterName} has been notified and can apply for another exchange.',
+                              ),
+                              backgroundColor: AppTheme.textSecondaryColor,
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error declining exchange: $e'),
+                              backgroundColor: AppTheme.errorColor,
+                            ),
+                          );
+                        }
                       },
                       child: const Text('Decline'),
                     ),
@@ -398,5 +451,14 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
         ],
       ),
     );
+  }
+}
+
+// Helper class to track tab controller index
+class _TabIndexNotifier extends ValueNotifier<int> {
+  _TabIndexNotifier(TabController controller) : super(controller.index) {
+    controller.addListener(() {
+      value = controller.index;
+    });
   }
 }

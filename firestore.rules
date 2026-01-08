@@ -70,5 +70,112 @@ service cloud.firestore {
       allow create, update, delete: if isAuthenticated() && 
         request.resource.data.userId == request.auth.uid;
     }
+    
+    // Notifications
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Any authenticated user can create a notification for another user
+      // (needed for exchange requests, rejections, etc.)
+      allow create: if isAuthenticated() && request.resource.data.userId != null;
+      
+      // Users can update/delete only their own notifications
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+    
+    // Group Batches
+    match /batches/{batchId} {
+      // Anyone can read batches (browse/discover)
+      allow read: if isAuthenticated();
+      
+      // Only authenticated users can create batches
+      allow create: if isAuthenticated() && 
+        request.resource.data.tutorId == request.auth.uid;
+      
+      // Tutors can update their own batches OR
+      // Students can enroll/leave (update enrolledStudentIds)
+      allow update: if isAuthenticated() && (
+        // Tutor updating their own batch
+        resource.data.tutorId == request.auth.uid ||
+        // Student enrolling (adding themselves to enrolledStudentIds)
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['enrolledStudentIds', 'currentEnrollments']) &&
+          request.resource.data.enrolledStudentIds.hasAll(resource.data.enrolledStudentIds) &&
+          request.resource.data.enrolledStudentIds.size() == resource.data.enrolledStudentIds.size() + 1 &&
+          request.resource.data.enrolledStudentIds.hasAll([request.auth.uid]) &&
+          request.resource.data.currentEnrollments == resource.data.currentEnrollments + 1
+        ) ||
+        // Student leaving (removing themselves from enrolledStudentIds)
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['enrolledStudentIds', 'currentEnrollments']) &&
+          resource.data.enrolledStudentIds.hasAll([request.auth.uid]) &&
+          !request.resource.data.enrolledStudentIds.hasAll([request.auth.uid]) &&
+          request.resource.data.enrolledStudentIds.size() == resource.data.enrolledStudentIds.size() - 1 &&
+          request.resource.data.currentEnrollments == resource.data.currentEnrollments - 1
+        )
+      );
+      
+      // Only tutors can delete their own batches (with no enrollments)
+      allow delete: if isAuthenticated() && 
+        resource.data.tutorId == request.auth.uid &&
+        resource.data.currentEnrollments == 0;
+    }
+    
+    // Learning Requests (Public Request Board)
+    match /learning_requests/{requestId} {
+      // Anyone authenticated can read (browse/discover)
+      allow read: if isAuthenticated();
+      
+      // Learners can create their own requests
+      allow create: if isAuthenticated() && 
+        request.resource.data.learnerId == request.auth.uid &&
+        request.resource.data.status == 'open';
+      
+      // Learners can cancel their own requests OR
+      // Tutors can accept (FCFS - update status to accepted)
+      allow update: if isAuthenticated() && (
+        // Learner canceling their own request (open -> cancelled)
+        (
+          resource.data.learnerId == request.auth.uid &&
+          resource.data.status == 'open' &&
+          request.resource.data.status == 'cancelled'
+        ) ||
+        // Tutor accepting request (open -> accepted, FCFS)
+        (
+          resource.data.status == 'open' &&
+          request.resource.data.status == 'accepted' &&
+          request.resource.data.acceptedByTutorId == request.auth.uid &&
+          request.resource.data.acceptedAt != null &&
+          request.resource.data.exchangeId != null
+        )
+      );
+      
+      // Learners can delete their own cancelled requests
+      allow delete: if isAuthenticated() && 
+        resource.data.learnerId == request.auth.uid &&
+        resource.data.status == 'cancelled';
+    }
+
+    // Reviews collection
+    match /reviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        request.resource.data.reviewerId == request.auth.uid &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
+      allow update, delete: if false; // Reviews are immutable
+    }
+
+    // Payments collection
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow create: if isAuthenticated() &&
+        request.resource.data.fromUserId == request.auth.uid;
+      allow update: if false; // Only system can update (done via admin/cloud functions)
+    }
   }
 }

@@ -77,7 +77,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: AppTheme.primaryGradient,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFFFFF), // White
+              Color(0xFFF5F8FF), // Light blue
+            ],
+          ),
         ),
         child: Center(
           child: FadeTransition(
@@ -85,55 +92,46 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo/Icon
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.swap_horiz_rounded,
-                    size: 80,
-                    color: AppTheme.primaryColor,
-                  ),
+                // App Logo
+                Image.asset(
+                  'assets/images/logo.png',
+                  width: 200,
+                  height: 200,
                 ),
                 const SizedBox(height: 24),
                 
                 // App Name
                 Text(
-                  'XChangeHUb',
+                  'XChangeHub',
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        color: Colors.white,
-                        fontSize: 36,
+                        color: const Color(0xFF1A237E),
+                        fontSize: 42,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
+                        letterSpacing: 0.5,
                       ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 
                 // Tagline
                 Text(
-                  'Learn by Teaching, Grow Together',
+                  'Learn. Share. Grow.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 16,
+                        color: const Color(0xFF666666),
+                        fontSize: 18,
+                        letterSpacing: 0.3,
                       ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 60),
                 
                 // Loading Indicator
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                  ),
                 ),
               ],
             ),

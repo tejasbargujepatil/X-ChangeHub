@@ -5,11 +5,13 @@ import '../models/skill_exchange_model.dart';
 import '../models/user_model.dart';
 import '../models/portfolio_item_model.dart';
 import 'user_service.dart';
+import 'notification_service.dart';
 
 class SkillExchangeService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final UserService _userService = UserService();
+  final NotificationService _notificationService = NotificationService();
   final Uuid _uuid = const Uuid();
 
   // Create exchange request
@@ -48,6 +50,14 @@ class SkillExchangeService {
           .collection('skill_exchanges')
           .doc(exchange.id)
           .set(exchange.toMap());
+
+      // Send notification to teacher
+      await _notificationService.sendNewExchangeRequestNotification(
+        teacherId: teacherId,
+        learnerName: requester.fullName,
+        skillRequested: skillRequested,
+        skillOffered: skillOffered,
+      );
 
       return exchange;
     } catch (e) {
@@ -126,12 +136,27 @@ class SkillExchangeService {
     String? meetingLink,
   }) async {
     try {
+      // Get exchange details for notification
+      final exchangeDoc = await _firestore
+          .collection('skill_exchanges')
+          .doc(exchangeId)
+          .get();
+      final exchange = SkillExchangeModel.fromMap(exchangeDoc.data()!);
+
       await _firestore.collection('skill_exchanges').doc(exchangeId).update({
         'status': ExchangeStatus.accepted.name,
         'scheduledTime': scheduledTime.toIso8601String(),
         'duration': duration,
         'meetingLink': meetingLink,
       });
+
+      // Send notification to requester (learner)
+      await _notificationService.sendExchangeAcceptanceNotification(
+        learnerId: exchange.requesterId,
+        teacherName: exchange.teacherName,
+        skillRequested: exchange.skillRequested,
+        scheduledTime: scheduledTime,
+      );
     } catch (e) {
       throw Exception('Failed to accept exchange: $e');
     }
@@ -140,9 +165,23 @@ class SkillExchangeService {
   // Reject exchange request
   Future<void> rejectExchangeRequest(String exchangeId) async {
     try {
+      // Get exchange details for notification
+      final exchangeDoc = await _firestore
+          .collection('skill_exchanges')
+          .doc(exchangeId)
+          .get();
+      final exchange = SkillExchangeModel.fromMap(exchangeDoc.data()!);
+
       await _firestore.collection('skill_exchanges').doc(exchangeId).update({
         'status': ExchangeStatus.rejected.name,
       });
+
+      // Send notification to requester (learner)
+      await _notificationService.sendExchangeRejectionNotification(
+        learnerId: exchange.requesterId,
+        teacherName: exchange.teacherName,
+        skillRequested: exchange.skillRequested,
+      );
     } catch (e) {
       throw Exception('Failed to reject exchange: $e');
     }

@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
 import '../portfolio/portfolio_view_screen.dart';
 import 'edit_profile_screen.dart';
+import 'privacy_policy_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -200,6 +201,28 @@ class ProfileScreen extends StatelessWidget {
                 label: const Text('View My Portfolio'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+            ),
+
+            // Privacy Policy Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PrivacyPolicyScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.privacy_tip),
+                label: const Text('Privacy Policy'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  foregroundColor: AppTheme.primaryColor,
+                  side: const BorderSide(color: AppTheme.primaryColor),
                 ),
               ),
             ),

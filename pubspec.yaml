@@ -2,7 +2,7 @@ name: xchangehub
 description: "XChangeHUb - Peer-to-Peer Learning Platform"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+5
 
 environment:
   sdk: ^3.10.3
@@ -50,6 +50,9 @@ dependencies:
   flutter_chat_ui: ^1.6.0
   file_picker: ^8.0.0
   cloud_functions: ^5.6.2  # For Google Meet integration
+  
+  # Video Conferencing:
+  # jitsi_meet_flutter_sdk: ^10.0.0
   
   # Ratings & Reviews
   flutter_rating_bar: ^4.0.0

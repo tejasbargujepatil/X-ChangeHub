@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => app_auth.AuthProvider()),
       ],
       child: MaterialApp(
-        title: 'XChangeHUb',
+        title: 'XChangeHub',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),

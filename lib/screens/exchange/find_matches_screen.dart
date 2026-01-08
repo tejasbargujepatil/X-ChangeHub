@@ -57,10 +57,14 @@ class _FindMatchesScreenState extends State<FindMatchesScreen> {
       return;
     }
 
-    if (currentUser.skillsToTeach.isEmpty) {
+    // For first 3 exchanges, skills to teach is not required
+    // After 3 exchanges, user must have skills to teach
+    if (currentUser.completedExchanges >= 3 && currentUser.skillsToTeach.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add skills you can teach in your profile first'),
+        SnackBar(
+          content: Text(
+            'Please add skills you can teach in your profile. All free exchanges used (${currentUser.completedExchanges}/3)!',
+          ),
         ),
       );
       return;
@@ -73,6 +77,7 @@ class _FindMatchesScreenState extends State<FindMatchesScreen> {
         teacher: teacher,
         skillRequested: _selectedSkill!,
         mySkills: currentUser.skillsToTeach,
+        completedExchanges: currentUser.completedExchanges,
       ),
     );
 
@@ -81,18 +86,27 @@ class _FindMatchesScreenState extends State<FindMatchesScreen> {
     // Create exchange request
     try {
       final exchangeService = SkillExchangeService();
+      final skillOffered = result['skillOffered'];
+      
       await exchangeService.createExchangeRequest(
         teacherId: teacher.uid,
-        skillOffered: result['skillOffered'],
+        skillOffered: skillOffered ?? 'Free Exchange', // Use placeholder for free exchanges
         skillRequested: _selectedSkill!,
         message: result['message'].isEmpty ? null : result['message'],
       );
 
       if (!mounted) return;
 
+      // Calculate remaining free exchanges
+      final remainingAfter = 3 - currentUser.completedExchanges - 1;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Exchange request sent to ${teacher.fullName}!'),
+          content: Text(
+            skillOffered == null
+                ? 'Free exchange request sent! You have $remainingAfter free ${remainingAfter == 1 ? "exchange" : "exchanges"} left after this.'
+                : 'Exchange request sent to ${teacher.fullName}!',
+          ),
           backgroundColor: AppTheme.successColor,
         ),
       );

@@ -9,12 +9,14 @@ class RequestExchangeDialog extends StatefulWidget {
   final UserModel teacher;
   final String skillRequested;
   final List<String> mySkills;
+  final int completedExchanges;
 
   const RequestExchangeDialog({
     super.key,
     required this.teacher,
     required this.skillRequested,
     required this.mySkills,
+    this.completedExchanges = 0,
   });
 
   @override
@@ -107,7 +109,9 @@ class _RequestExchangeDialogState extends State<RequestExchangeDialog> {
 
                   // What you'll teach
                   Text(
-                    "What will you teach in return?",
+                    widget.completedExchanges < 3
+                        ? "What will you teach in return? (Optional for first 3 exchanges)"
+                        : "What will you teach in return? (Required)",
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
@@ -120,20 +124,37 @@ class _RequestExchangeDialogState extends State<RequestExchangeDialog> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         isExpanded: true,
-                        hint: const Text('Select a skill to offer'),
+                        hint: Text(
+                          widget.completedExchanges < 3
+                              ? 'Select a skill to offer (optional)'
+                              : 'Select a skill to offer',
+                        ),
                         value: _selectedSkillToOffer,
-                        items: widget.mySkills.map((skill) {
-                          return DropdownMenuItem(
-                            value: skill,
-                            child: Row(
-                              children: [
-                                const Icon(Icons.lightbulb_outline, size: 20),
-                                const SizedBox(width: 8),
-                                Text(skill),
-                              ],
+                        items: [
+                          if (widget.completedExchanges < 3)
+                            const DropdownMenuItem(
+                              value: 'none',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.card_giftcard, size: 20, color: AppTheme.successColor),
+                                  SizedBox(width: 8),
+                                  Text('No skill (Free Exchange)', style: TextStyle(color: AppTheme.successColor)),
+                                ],
+                              ),
                             ),
-                          );
-                        }).toList(),
+                          ...widget.mySkills.map((skill) {
+                            return DropdownMenuItem(
+                              value: skill,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.lightbulb_outline, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(skill),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ],
                         onChanged: (value) {
                           setState(() {
                             _selectedSkillToOffer = value;
@@ -167,27 +188,45 @@ class _RequestExchangeDialogState extends State<RequestExchangeDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.successColor.withOpacity(0.1),
+                      color: widget.completedExchanges < 3
+                          ? AppTheme.primaryColor.withOpacity(0.1)
+                          : AppTheme.successColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppTheme.successColor.withOpacity(0.3),
+                        color: widget.completedExchanges < 3
+                            ? AppTheme.primaryColor.withOpacity(0.3)
+                            : AppTheme.successColor.withOpacity(0.3),
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          Icons.info_outline,
-                          color: AppTheme.successColor,
+                          widget.completedExchanges < 3
+                              ? Icons.celebration
+                              : Icons.info_outline,
+                          color: widget.completedExchanges < 3
+                              ? AppTheme.primaryColor
+                              : AppTheme.successColor,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            'This is a free peer-to-peer exchange. Both of you will earn XP!',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.successColor,
-                            ),
+                          child: Builder(
+                            builder: (context) {
+                              final remainingFree = 3 - widget.completedExchanges;
+                              return Text(
+                                widget.completedExchanges < 3
+                                    ? 'Free Exchange! You have $remainingFree free ${remainingFree == 1 ? "exchange" : "exchanges"} available. No need to offer a skill in return yet!'
+                                    : 'This is a peer-to-peer exchange. You must offer a skill to learn. Both of you will earn XP!',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: widget.completedExchanges < 3
+                                      ? AppTheme.primaryColor
+                                      : AppTheme.successColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -212,14 +251,17 @@ class _RequestExchangeDialogState extends State<RequestExchangeDialog> {
                   Expanded(
                     flex: 2,
                     child: ElevatedButton(
-                      onPressed: _selectedSkillToOffer == null
-                          ? null
-                          : () {
-                              Navigator.pop(context, {
-                                'skillOffered': _selectedSkillToOffer,
-                                'message': _messageController.text.trim(),
-                              });
-                            },
+                      onPressed: () {
+                        // For first 3 exchanges, skill is optional
+                        // After 3 exchanges, skill is required
+                        if (widget.completedExchanges >= 3 && _selectedSkillToOffer == null) {
+                          return;
+                        }
+                        Navigator.pop(context, {
+                          'skillOffered': _selectedSkillToOffer == 'none' ? null : _selectedSkillToOffer,
+                          'message': _messageController.text.trim(),
+                        });
+                      },
                       child: const Text('Send Request'),
                     ),
                   ),
