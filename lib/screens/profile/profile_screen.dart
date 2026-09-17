@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
+import '../../models/mentor_metrics_model.dart';
+import '../../services/mentor_quality_service.dart';
 import '../portfolio/portfolio_view_screen.dart';
 import 'edit_profile_screen.dart';
 import 'privacy_policy_screen.dart';
@@ -136,6 +138,7 @@ class ProfileScreen extends StatelessWidget {
               'Skills I Can Teach',
               user.skillsToTeach,
               AppTheme.primaryColor,
+              verifiedSkills: user.verifiedSkills,
             ),
 
             _buildSection(
@@ -184,6 +187,9 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
+
+            // Mentor Quality & Reputation Section
+            _buildMentorQualitySection(context, user.uid),
 
             // Portfolio Button
             Padding(
@@ -260,7 +266,13 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, List<String> items, Color color) {
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    List<String> items,
+    Color color, {
+    List<String> verifiedSkills = const [],
+  }) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -284,16 +296,22 @@ class ProfileScreen extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: items.map((skill) => 
-                Chip(
-                  label: Text(skill),
-                  backgroundColor: color.withOpacity(0.1),
+              children: items.map((skill) {
+                final isVerified = verifiedSkills.contains(skill);
+                return Chip(
+                  avatar: isVerified
+                      ? const Icon(Icons.verified, size: 16, color: AppTheme.successColor)
+                      : null,
+                  label: Text(
+                    isVerified ? '$skill (XchangeHub Verified)' : skill,
+                  ),
+                  backgroundColor: color.withValues(alpha: 0.1),
                   labelStyle: TextStyle(
                     color: color,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: isVerified ? FontWeight.bold : FontWeight.w500,
                   ),
-                ),
-              ).toList(),
+                );
+              }).toList(),
             ),
         ],
       ),
@@ -354,6 +372,127 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMentorQualitySection(BuildContext context, String userId) {
+    final qualityService = MentorQualityService();
+
+    return StreamBuilder<MentorMetricsModel?>(
+      stream: qualityService.watchMentorMetrics(userId),
+      builder: (context, snapshot) {
+        final metrics = snapshot.data;
+        if (metrics == null) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.verified_user, color: AppTheme.primaryColor),
+                        SizedBox(width: 8),
+                        Text(
+                          'Mentor Quality & Reputation',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    if (metrics.sufficientHistory && metrics.qualityScore != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.successColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.successColor),
+                        ),
+                        child: Text(
+                          '${metrics.qualityScore} / 100',
+                          style: const TextStyle(
+                            color: AppTheme.successColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'New Mentor',
+                          style: TextStyle(fontSize: 11, color: AppTheme.textSecondaryColor),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildQualityMetricTile(
+                      context,
+                      'Delivery Rate',
+                      '${metrics.topicDeliveryRate.toStringAsFixed(0)}%',
+                      Icons.task_alt,
+                    ),
+                    _buildQualityMetricTile(
+                      context,
+                      'Plans Finished',
+                      '${metrics.learningPlansCompleted}',
+                      Icons.assignment_turned_in,
+                    ),
+                    _buildQualityMetricTile(
+                      context,
+                      'Confirmed Topics',
+                      '${metrics.topicsLearnerConfirmed}',
+                      Icons.thumb_up,
+                    ),
+                  ],
+                ),
+                if (metrics.validatedLearningIssues > 0) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Validated Accountability Record: ${metrics.validatedLearningIssues} issue(s) resolved',
+                    style: const TextStyle(fontSize: 11, color: AppTheme.warningColor, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQualityMetricTile(BuildContext context, String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: AppTheme.primaryColor, size: 22),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondaryColor),
+        ),
+      ],
     );
   }
 }

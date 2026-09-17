@@ -12,6 +12,26 @@ class AuthService {
   // Get current user
   User? get currentUser => _auth.currentUser;
 
+  /// Fetches custom claims from current Firebase Auth user token
+  Future<Map<String, dynamic>> getUserCustomClaims({bool forceRefresh = false}) async {
+    final user = _auth.currentUser;
+    if (user == null) return {};
+    final idTokenResult = await user.getIdTokenResult(forceRefresh);
+    return idTokenResult.claims ?? {};
+  }
+
+  /// Checks if the current user is an authorized reviewer (or admin)
+  Future<bool> isReviewer({bool forceRefresh = false}) async {
+    final claims = await getUserCustomClaims(forceRefresh: forceRefresh);
+    return (claims['reviewer'] == true) || (claims['admin'] == true);
+  }
+
+  /// Checks if the current user is an authorized administrator
+  Future<bool> isAdmin({bool forceRefresh = false}) async {
+    final claims = await getUserCustomClaims(forceRefresh: forceRefresh);
+    return claims['admin'] == true;
+  }
+
   // Sign up with email and password
   Future<UserModel?> signUpWithEmail({
     required String email,

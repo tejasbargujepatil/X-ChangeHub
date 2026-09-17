@@ -28,6 +28,7 @@ class SkillExchangeModel {
   final double? teacherRating;
   final String? requesterReview;
   final String? teacherReview;
+  final String? learningPlanId;
   
   SkillExchangeModel({
     required this.id,
@@ -50,6 +51,7 @@ class SkillExchangeModel {
     this.teacherRating,
     this.requesterReview,
     this.teacherReview,
+    this.learningPlanId,
   });
 
   Map<String, dynamic> toMap() {
@@ -74,6 +76,7 @@ class SkillExchangeModel {
       'teacherRating': teacherRating,
       'requesterReview': requesterReview,
       'teacherReview': teacherReview,
+      'learningPlanId': learningPlanId,
     };
   }
 
@@ -106,6 +109,55 @@ class SkillExchangeModel {
       teacherRating: map['teacherRating']?.toDouble(),
       requesterReview: map['requesterReview'],
       teacherReview: map['teacherReview'],
+      learningPlanId: map['learningPlanId'],
+    );
+  }
+
+  SkillExchangeModel copyWith({
+    String? id,
+    String? requesterId,
+    String? requesterName,
+    String? requesterImageUrl,
+    String? teacherId,
+    String? teacherName,
+    String? teacherImageUrl,
+    String? skillOffered,
+    String? skillRequested,
+    ExchangeStatus? status,
+    String? message,
+    DateTime? scheduledTime,
+    int? duration,
+    String? meetingLink,
+    DateTime? createdAt,
+    DateTime? completedAt,
+    double? requesterRating,
+    double? teacherRating,
+    String? requesterReview,
+    String? teacherReview,
+    String? learningPlanId,
+  }) {
+    return SkillExchangeModel(
+      id: id ?? this.id,
+      requesterId: requesterId ?? this.requesterId,
+      requesterName: requesterName ?? this.requesterName,
+      requesterImageUrl: requesterImageUrl ?? this.requesterImageUrl,
+      teacherId: teacherId ?? this.teacherId,
+      teacherName: teacherName ?? this.teacherName,
+      teacherImageUrl: teacherImageUrl ?? this.teacherImageUrl,
+      skillOffered: skillOffered ?? this.skillOffered,
+      skillRequested: skillRequested ?? this.skillRequested,
+      status: status ?? this.status,
+      message: message ?? this.message,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
+      duration: duration ?? this.duration,
+      meetingLink: meetingLink ?? this.meetingLink,
+      createdAt: createdAt ?? this.createdAt,
+      completedAt: completedAt ?? this.completedAt,
+      requesterRating: requesterRating ?? this.requesterRating,
+      teacherRating: teacherRating ?? this.teacherRating,
+      requesterReview: requesterReview ?? this.requesterReview,
+      teacherReview: teacherReview ?? this.teacherReview,
+      learningPlanId: learningPlanId ?? this.learningPlanId,
     );
   }
 }

@@ -239,6 +239,7 @@ class SkillVerificationModel {
   final String? testScore;
   final String? verifiedBy;
   final String? notes;
+  final String? learningPlanId;
 
   SkillVerificationModel({
     required this.id,
@@ -252,6 +253,7 @@ class SkillVerificationModel {
     this.testScore,
     this.verifiedBy,
     this.notes,
+    this.learningPlanId,
   });
 
   Map<String, dynamic> toMap() {
@@ -267,6 +269,7 @@ class SkillVerificationModel {
       'testScore': testScore,
       'verifiedBy': verifiedBy,
       'notes': notes,
+      'learningPlanId': learningPlanId,
     };
   }
 
@@ -291,6 +294,37 @@ class SkillVerificationModel {
       testScore: map['testScore'],
       verifiedBy: map['verifiedBy'],
       notes: map['notes'],
+      learningPlanId: map['learningPlanId'],
+    );
+  }
+
+  SkillVerificationModel copyWith({
+    String? id,
+    String? userId,
+    String? skill,
+    VerificationType? type,
+    VerificationStatus? status,
+    DateTime? requestedAt,
+    DateTime? verifiedAt,
+    String? certificateUrl,
+    String? testScore,
+    String? verifiedBy,
+    String? notes,
+    String? learningPlanId,
+  }) {
+    return SkillVerificationModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      skill: skill ?? this.skill,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      requestedAt: requestedAt ?? this.requestedAt,
+      verifiedAt: verifiedAt ?? this.verifiedAt,
+      certificateUrl: certificateUrl ?? this.certificateUrl,
+      testScore: testScore ?? this.testScore,
+      verifiedBy: verifiedBy ?? this.verifiedBy,
+      notes: notes ?? this.notes,
+      learningPlanId: learningPlanId ?? this.learningPlanId,
     );
   }
 }
@@ -300,6 +334,7 @@ enum VerificationType {
   test,
   portfolio,
   endorsement,
+  learningPlan,
 }
 
 enum VerificationStatus {
@@ -307,6 +342,7 @@ enum VerificationStatus {
   underReview,
   verified,
   rejected,
+  revoked,
 }
 
 /// Notification reminder model

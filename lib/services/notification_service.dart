@@ -7,6 +7,7 @@ enum NotificationType {
   exchangeCompleted,
   newExchangeRequest,
   general,
+  other,
 }
 
 class NotificationModel {

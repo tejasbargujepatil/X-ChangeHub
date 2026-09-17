@@ -350,4 +350,18 @@ class SkillExchangeService {
           .toList();
     });
   }
+
+  // Associate learning plan with exchange
+  Future<void> associateLearningPlan({
+    required String exchangeId,
+    required String learningPlanId,
+  }) async {
+    try {
+      await _firestore.collection('skill_exchanges').doc(exchangeId).update({
+        'learningPlanId': learningPlanId,
+      });
+    } catch (e) {
+      throw Exception('Failed to associate learning plan: $e');
+    }
+  }
 }

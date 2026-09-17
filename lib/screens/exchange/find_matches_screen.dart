@@ -194,7 +194,23 @@ class _FindMatchesScreenState extends State<FindMatchesScreen> {
                                   ? Text(user.fullName[0])
                                   : null,
                             ),
-                            title: Text(user.fullName),
+                            title: Row(
+                              children: [
+                                Text(user.fullName),
+                                if (_selectedSkill != null && user.verifiedSkills.contains(_selectedSkill)) ...[
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.verified, size: 16, color: AppTheme.successColor),
+                                  const Text(
+                                    ' XchangeHub Verified',
+                                    style: TextStyle(
+                                      color: AppTheme.successColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                             subtitle: Text(
                               '⭐ ${user.averageRating.toStringAsFixed(1)} • Level ${user.level}',
                             ),

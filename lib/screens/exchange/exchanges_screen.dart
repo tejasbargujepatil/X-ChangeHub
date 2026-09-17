@@ -7,6 +7,9 @@ import '../../services/skill_exchange_service.dart';
 import '../../widgets/exchange_dialogs.dart';
 import '../learning_request/browse_requests_screen.dart';
 import '../learning_request/post_request_screen.dart';
+import '../learning_plan/learning_plan_screen.dart';
+import '../../widgets/review_dialog.dart';
+import '../../models/review_model.dart';
 
 class ExchangesScreen extends StatefulWidget {
   const ExchangesScreen({super.key});
@@ -332,7 +335,33 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
                   ),
                 ],
               ),
-            if (isActive)
+            if (isActive) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LearningPlanScreen(
+                          exchangeId: exchange.id,
+                          mentorId: exchange.teacherId,
+                          learnerId: exchange.requesterId,
+                          skillName: exchange.skillRequested,
+                          currentUserId: currentUserId,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.assignment_outlined),
+                  label: const Text('Learning Plan'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -367,21 +396,40 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
                         }
                       },
                       icon: const Icon(Icons.video_call),
-                      label: const Text('Join Google Meet'),
+                      label: const Text('Join Meet'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        // Simple completion using the service
+                        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                        if (currentUserId == null) return;
+
+                        final bool isRequester = exchange.requesterId == currentUserId;
+                        final String revieweeId = isRequester ? exchange.teacherId : exchange.requesterId;
+                        final String revieweeName = isRequester ? exchange.teacherName : exchange.requesterName;
+
+                        // Open ReviewDialog first so user picks rating and feedback
+                        final bool? reviewSubmitted = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => ReviewDialog(
+                            revieweeId: revieweeId,
+                            revieweeName: revieweeName,
+                            type: ReviewType.skillExchange,
+                            relatedId: exchange.id,
+                          ),
+                        );
+
+                        // If user cancelled dialog or submission failed, do not complete exchange
+                        if (reviewSubmitted != true) return;
+
                         try {
-                          final currentUserId = FirebaseAuth.instance.currentUser?.uid;
                           await _exchangeService.completeExchange(
                             exchangeId: exchange.id,
-                            isRequester: exchange.requesterId == currentUserId,
-                            rating: 5.0, // Default rating for now
-                            review: 'Exchange completed successfully',
+                            isRequester: isRequester,
+                            rating: 5.0, // Updated by ReviewService upon review submission
+                            review: 'Exchange completed',
                           );
                           
                           if (!mounted) return;
@@ -405,11 +453,16 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
                       },
                       icon: const Icon(Icons.check),
                       label: const Text('Complete'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.successColor,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
-            if (isCompleted)
+            ],
+            if (isCompleted) ...[
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -431,6 +484,30 @@ class _ExchangesScreenState extends State<ExchangesScreen> with SingleTickerProv
                   ],
                 ),
               ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LearningPlanScreen(
+                          exchangeId: exchange.id,
+                          mentorId: exchange.teacherId,
+                          learnerId: exchange.requesterId,
+                          skillName: exchange.skillRequested,
+                          currentUserId: currentUserId,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.assignment_outlined),
+                  label: const Text('View Learning Plan'),
+                ),
+              ),
+            ],
           ],
         ),
       ),

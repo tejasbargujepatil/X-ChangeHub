@@ -223,11 +223,38 @@ class VerificationService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final Uuid _uuid = const Uuid();
 
+  /// Checks if current user has reviewer or admin custom claim
+  Future<bool> isReviewer({bool forceRefresh = false}) async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    final idTokenResult = await user.getIdTokenResult(forceRefresh);
+    final claims = idTokenResult.claims;
+    if (claims == null) return false;
+    return (claims['reviewer'] == true) || (claims['admin'] == true);
+  }
+
+  /// Check if a user is eligible for skill verification via completed Learning Plan
+  Future<bool> checkVerificationEligibility(String userId, String skill) async {
+    try {
+      final snapshot = await _firestore
+          .collection('learning_plans')
+          .where('learnerId', isEqualTo: userId)
+          .where('skillName', isEqualTo: skill)
+          .where('status', isEqualTo: 'completed')
+          .limit(1)
+          .get();
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Request skill verification
   Future<String> requestVerification({
     required String skill,
     required VerificationType type,
     String? certificateUrl,
+    String? learningPlanId,
   }) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not authenticated');
@@ -237,8 +264,10 @@ class VerificationService {
       userId: currentUser.uid,
       skill: skill,
       type: type,
+      status: VerificationStatus.pending,
       requestedAt: DateTime.now(),
       certificateUrl: certificateUrl,
+      learningPlanId: learningPlanId,
     );
 
     await _firestore.collection('verifications').doc(verification.id).set(verification.toMap());
@@ -272,7 +301,7 @@ class VerificationService {
     return snapshot.docs.isNotEmpty;
   }
 
-  /// Verify a skill (admin/automated function)
+  /// Verify a skill (admin/reviewer function requiring Custom Claims)
   Future<void> verifySkill({
     required String verificationId,
     required bool approve,
@@ -282,6 +311,11 @@ class VerificationService {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not authenticated');
 
+    final authorized = await isReviewer();
+    if (!authorized) {
+      throw Exception('Unauthorized: Only reviewers or administrators can approve or reject skill verifications');
+    }
+
     await _firestore.collection('verifications').doc(verificationId).update({
       'status': approve ? VerificationStatus.verified.name : VerificationStatus.rejected.name,
       'verifiedAt': Timestamp.fromDate(DateTime.now()),
@@ -290,7 +324,7 @@ class VerificationService {
       'testScore': testScore,
     });
 
-    // If approved, add verified badge
+    // If approved, update user's verified skills list
     if (approve) {
       final verification = await _firestore
           .collection('verifications')
@@ -302,12 +336,45 @@ class VerificationService {
         final userId = data['userId'];
         final skill = data['skill'];
 
-        // Update user's verified skills list
         await _firestore.collection('users').doc(userId).update({
           'verifiedSkills': FieldValue.arrayUnion([skill]),
         });
       }
     }
+  }
+
+  /// Revokes an existing skill verification (admin/reviewer function)
+  Future<void> revokeVerification({
+    required String verificationId,
+    required String reason,
+  }) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception('Not authenticated');
+
+    final authorized = await isReviewer();
+    if (!authorized) {
+      throw Exception('Unauthorized: Only reviewers or administrators can revoke skill verifications');
+    }
+
+    final docRef = _firestore.collection('verifications').doc(verificationId);
+    final docSnap = await docRef.get();
+    if (!docSnap.exists || docSnap.data() == null) {
+      throw Exception('Verification record not found');
+    }
+
+    final verification = SkillVerificationModel.fromMap(docSnap.data()!);
+
+    await docRef.update({
+      'status': VerificationStatus.revoked.name,
+      'notes': 'Revoked by reviewer: $reason',
+      'verifiedBy': currentUser.uid,
+      'verifiedAt': Timestamp.fromDate(DateTime.now()),
+    });
+
+    // Remove from user's verifiedSkills array
+    await _firestore.collection('users').doc(verification.userId).update({
+      'verifiedSkills': FieldValue.arrayRemove([verification.skill]),
+    });
   }
 }
 

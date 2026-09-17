@@ -7,6 +7,7 @@ class UserModel {
   final String? bio;
   final List<String> skillsToTeach;
   final List<String> skillsToLearn;
+  final List<String> verifiedSkills;
   final int xpPoints;
   final int level;
   final List<String> badges;
@@ -27,6 +28,7 @@ class UserModel {
     this.bio,
     this.skillsToTeach = const [],
     this.skillsToLearn = const [],
+    this.verifiedSkills = const [],
     this.xpPoints = 0,
     this.level = 1,
     this.badges = const [],
@@ -49,6 +51,7 @@ class UserModel {
       'bio': bio,
       'skillsToTeach': skillsToTeach,
       'skillsToLearn': skillsToLearn,
+      'verifiedSkills': verifiedSkills,
       'xpPoints': xpPoints,
       'level': level,
       'badges': badges,
@@ -72,6 +75,7 @@ class UserModel {
       bio: map['bio'],
       skillsToTeach: List<String>.from(map['skillsToTeach'] ?? []),
       skillsToLearn: List<String>.from(map['skillsToLearn'] ?? []),
+      verifiedSkills: List<String>.from(map['verifiedSkills'] ?? []),
       xpPoints: map['xpPoints'] ?? 0,
       level: map['level'] ?? 1,
       badges: List<String>.from(map['badges'] ?? []),
@@ -94,6 +98,7 @@ class UserModel {
     String? bio,
     List<String>? skillsToTeach,
     List<String>? skillsToLearn,
+    List<String>? verifiedSkills,
     int? xpPoints,
     int? level,
     List<String>? badges,
@@ -114,6 +119,7 @@ class UserModel {
       bio: bio ?? this.bio,
       skillsToTeach: skillsToTeach ?? this.skillsToTeach,
       skillsToLearn: skillsToLearn ?? this.skillsToLearn,
+      verifiedSkills: verifiedSkills ?? this.verifiedSkills,
       xpPoints: xpPoints ?? this.xpPoints,
       level: level ?? this.level,
       badges: badges ?? this.badges,

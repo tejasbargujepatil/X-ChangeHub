@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -41,6 +43,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _selectedSkillsToLearn = List.from(user.skillsToLearn);
       _profileImagePath = user.profileImageUrl;
     }
+  }
+
+  ImageProvider? _getProfileImageProvider(String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return NetworkImage(path);
+    }
+    if (kIsWeb) {
+      return NetworkImage(path);
+    }
+    return FileImage(File(path));
   }
 
   @override
@@ -268,9 +281,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       CircleAvatar(
                         radius: 60,
                         backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                        backgroundImage: _profileImagePath != null
-                            ? NetworkImage(_profileImagePath!)
-                            : null,
+                        backgroundImage: _getProfileImageProvider(_profileImagePath),
                         child: _profileImagePath == null
                             ? Text(
                                 user.fullName[0].toUpperCase(),

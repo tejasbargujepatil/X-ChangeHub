@@ -9,17 +9,86 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    function isReviewer() {
+      return isAuthenticated() && (request.auth.token.reviewer == true || request.auth.token.admin == true);
+    }
+    
+    // Helper for users collection protected fields
+    function userProtectedFieldsUnchanged() {
+      return (!('xpPoints' in resource.data) || !('xpPoints' in request.resource.data) || request.resource.data.xpPoints == resource.data.xpPoints) &&
+             (!('level' in resource.data) || !('level' in request.resource.data) || request.resource.data.level == resource.data.level) &&
+             (!('verifiedSkills' in resource.data) || !('verifiedSkills' in request.resource.data) || request.resource.data.verifiedSkills == resource.data.verifiedSkills) &&
+             (!('averageRating' in resource.data) || !('averageRating' in request.resource.data) || request.resource.data.averageRating == resource.data.averageRating) &&
+             (!('totalRatings' in resource.data) || !('totalRatings' in request.resource.data) || request.resource.data.totalRatings == resource.data.totalRatings) &&
+             (!('completedExchanges' in resource.data) || !('completedExchanges' in request.resource.data) || request.resource.data.completedExchanges == resource.data.completedExchanges) &&
+             (!('completedProjects' in resource.data) || !('completedProjects' in request.resource.data) || request.resource.data.completedProjects == resource.data.completedProjects) &&
+             (!('isVerified' in resource.data) || !('isVerified' in request.resource.data) || request.resource.data.isVerified == resource.data.isVerified);
+    }
+
+    function isStatRewardUpdate() {
+      return isAuthenticated() &&
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['xpPoints', 'level', 'averageRating', 'totalRatings', 'completedExchanges', 'completedProjects', 'badges', 'lastActive']) &&
+             (!('xpPoints' in request.resource.data) || request.resource.data.xpPoints <= resource.data.xpPoints + 100) &&
+             (!('completedExchanges' in request.resource.data) || request.resource.data.completedExchanges <= resource.data.completedExchanges + 1);
+    }
     
     // Users collection
     match /users/{userId} {
       allow read: if true; // Public profiles (needed for username check during signup)
       allow create: if isOwner(userId);
       
-      // Allow owner to update their own profile
-      // OR allow any authenticated user to update (for skill exchange rewards and other features)
-      allow update: if isOwner(userId) || isAuthenticated();
+      // Allow owner to update profile (without tampering protected fields) or bounded stat updates
+      allow update: if (isOwner(userId) && userProtectedFieldsUnchanged()) || isStatRewardUpdate();
       
       allow delete: if isOwner(userId);
+    }
+
+    // Helper for Learning Plans lifecycle and structural immutability
+    function validLearningPlanStatusTransition() {
+      return (resource.data.status == 'draft' && (request.resource.data.status == 'draft' || request.resource.data.status == 'active')) ||
+             (resource.data.status == 'active' && request.resource.data.status != 'draft') ||
+             (resource.data.status == 'completed' && request.resource.data.status == 'completed') ||
+             (resource.data.status == 'disputed' || resource.data.status == 'cancelled');
+    }
+
+    function isLearningPlanStructureUnchanged() {
+      return request.resource.data.skillName == resource.data.skillName &&
+             request.resource.data.modules.size() == resource.data.modules.size();
+    }
+
+    // Learning Plans collection
+    match /learning_plans/{exchangeId} {
+      // Read allowed only for mentor or learner of the exchange
+      allow read: if isAuthenticated() && (
+        resource.data.mentorId == request.auth.uid || 
+        resource.data.learnerId == request.auth.uid
+      );
+      
+      // Create allowed only for participants of the exchange
+      allow create: if isAuthenticated() && (
+        request.resource.data.mentorId == request.auth.uid || 
+        request.resource.data.learnerId == request.auth.uid
+      ) && request.resource.data.exchangeId == exchangeId;
+      
+      // Update allowed only for participants, enforcing immutable IDs, valid status transitions, and structural lock once active
+      allow update: if isAuthenticated() && 
+        request.resource.data.planId == resource.data.planId &&
+        request.resource.data.exchangeId == resource.data.exchangeId &&
+        request.resource.data.mentorId == resource.data.mentorId &&
+        request.resource.data.learnerId == resource.data.learnerId &&
+        (
+          resource.data.mentorId == request.auth.uid ||
+          resource.data.learnerId == request.auth.uid
+        ) &&
+        validLearningPlanStatusTransition() &&
+        (resource.data.status == 'draft' || isLearningPlanStructureUnchanged());
+        
+      allow delete: if false; // Immutable historical records
     }
     
     // Skill exchanges
@@ -176,6 +245,76 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.fromUserId == request.auth.uid;
       allow update: if false; // Only system can update (done via admin/cloud functions)
+    }
+
+    // Learning Issues collection
+    match /learning_issues/{issueId} {
+      allow read: if isAuthenticated() && (
+        resource.data.reporterId == request.auth.uid ||
+        resource.data.reportedUserId == request.auth.uid ||
+        isReviewer()
+      );
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.reporterId == request.auth.uid &&
+        request.resource.data.status == 'open' &&
+        request.resource.data.resolution == 'pending' &&
+        request.resource.data.issueId == issueId;
+
+      allow update: if isReviewer() &&
+        request.resource.data.issueId == resource.data.issueId &&
+        request.resource.data.reporterId == resource.data.reporterId &&
+        request.resource.data.reportedUserId == resource.data.reportedUserId &&
+        request.resource.data.exchangeId == resource.data.exchangeId &&
+        request.resource.data.learningPlanId == resource.data.learningPlanId &&
+        request.resource.data.topicId == resource.data.topicId &&
+        request.resource.data.description == resource.data.description &&
+        request.resource.data.issueType == resource.data.issueType &&
+        request.resource.data.evidenceSnapshot == resource.data.evidenceSnapshot &&
+        request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if false; // Immutable historical evidence
+    }
+
+    // Learning Interventions collection
+    match /learning_interventions/{interventionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.targetUserId == request.auth.uid ||
+        isReviewer()
+      );
+      allow create: if isReviewer() &&
+        request.resource.data.assignedBy == request.auth.uid;
+      allow update: if isReviewer() &&
+        request.resource.data.assignedBy == resource.data.assignedBy;
+      allow delete: if false; // Immutable audit trail
+    }
+
+    // Mentor Metrics collection (Read-only for users; updated server-side by trusted Cloud Functions)
+    match /mentor_metrics/{mentorUserId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if false; // Clients cannot modify metrics directly
+    }
+
+    // Verifications collection (Skill verification requests & reviewer decisions)
+    match /verifications/{verificationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isReviewer()
+      );
+
+      // Standard users can submit verification requests for themselves as 'pending'
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.id == verificationId;
+
+      // ONLY authorized reviewers/admins can update verification status or approval details
+      allow update: if isReviewer() &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.skill == resource.data.skill;
+
+      allow delete: if false; // Immutable audit trail
     }
   }
 }
