@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
+import 'config/emulator_config.dart';
 import 'providers/auth_provider.dart' as app_auth;
 import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -17,6 +18,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Connect to Firebase Emulators if USE_EMULATOR=true flag is provided
+  connectToEmulatorsIfEnabled();
   
   // Note: Firebase Auth persistence is ALREADY enabled by default on Android/iOS
   // No additional setup needed - user will stay logged in!

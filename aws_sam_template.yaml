@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  XchangeHub AWS Serverless AI Skill & Mentor Matching Service
+  Deploys API Gateway + AWS Lambda + Amazon Bedrock integration for XchangeHub hackathon.
+
+Globals:
+  Function:
+    Timeout: 15
+    MemorySize: 512
+    Runtime: python3.11
+
+Resources:
+  XchangeHubMatcherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: aws_lambda_matcher.lambda_handler
+      Description: API endpoint handler for XchangeHub AI Skill Matching Engine
+      Environment:
+        Variables:
+          AWS_NODE_ENV: production
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:ListFoundationModels
+              Resource: '*'
+      Events:
+        MatchApi:
+          Type: Api
+          Properties:
+            Path: /v1/recommendations
+            Method: post
+
+Outputs:
+  XchangeHubMatchApiUrl:
+    Description: "API Gateway HTTP Endpoint for XchangeHub AI Skill Matching"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/v1/recommendations"
+  XchangeHubMatcherFunctionArn:
+    Description: "AWS Lambda Function ARN"
+    Value: !GetAtt XchangeHubMatcherFunction.Arn

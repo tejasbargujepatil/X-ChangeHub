@@ -219,8 +219,17 @@ class ModerationService {
 
 /// Service for skill verification
 class VerificationService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore? _customFirestore;
+  final FirebaseAuth? _customAuth;
+
+  VerificationService({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  })  : _customFirestore = firestore,
+        _customAuth = auth;
+
+  FirebaseFirestore get _firestore => _customFirestore ?? FirebaseFirestore.instance;
+  FirebaseAuth get _auth => _customAuth ?? FirebaseAuth.instance;
   final Uuid _uuid = const Uuid();
 
   /// Checks if current user has reviewer or admin custom claim
@@ -249,6 +258,43 @@ class VerificationService {
     }
   }
 
+  /// Checks whether a user already has an active verification request (pending, underReview, verified)
+  /// or already has the skill listed in their user profile's verifiedSkills array.
+  Future<bool> hasActiveVerificationRequest(String userId, String skill) async {
+    // 1. Check user document verifiedSkills array if accessible
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        final userData = userDoc.data();
+        final verifiedSkills = List<String>.from(userData?['verifiedSkills'] ?? []);
+        if (verifiedSkills.contains(skill)) {
+          return true;
+        }
+      }
+    } catch (_) {
+      // Ignore document fetch errors to maintain resilient fallback
+    }
+
+    // 2. Query verifications collection for active request status
+    final snapshot = await _firestore
+        .collection('verifications')
+        .where('userId', isEqualTo: userId)
+        .where('skill', isEqualTo: skill)
+        .get();
+
+    final activeStatusNames = {
+      VerificationStatus.pending.name,
+      VerificationStatus.underReview.name,
+      VerificationStatus.verified.name,
+    };
+
+    return snapshot.docs.any((doc) {
+      final data = doc.data();
+      final status = data['status'];
+      return activeStatusNames.contains(status);
+    });
+  }
+
   /// Request skill verification
   Future<String> requestVerification({
     required String skill,
@@ -258,6 +304,11 @@ class VerificationService {
   }) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not authenticated');
+
+    final activeExists = await hasActiveVerificationRequest(currentUser.uid, skill);
+    if (activeExists) {
+      throw Exception('An active verification request or verified badge already exists for "$skill".');
+    }
 
     final verification = SkillVerificationModel(
       id: _uuid.v4(),
@@ -299,6 +350,37 @@ class VerificationService {
         .get();
 
     return snapshot.docs.isNotEmpty;
+  }
+
+  /// Streams real-time pending skill verification requests for Reviewers/Admins.
+  /// Respects Firestore security rules (read allowed if isReviewer()).
+  Stream<List<SkillVerificationModel>> watchPendingVerifications({VerificationStatus? status}) {
+    final targetStatus = status ?? VerificationStatus.pending;
+    return _firestore
+        .collection('verifications')
+        .where('status', isEqualTo: targetStatus.name)
+        .orderBy('requestedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => SkillVerificationModel.fromMap(doc.data()))
+          .toList();
+    });
+  }
+
+  /// Streams real-time verification requests belonging to a specific user.
+  /// Automatically updates when request status changes (pending -> verified/rejected/revoked).
+  Stream<List<SkillVerificationModel>> watchUserVerifications(String userId) {
+    return _firestore
+        .collection('verifications')
+        .where('userId', isEqualTo: userId)
+        .orderBy('requestedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => SkillVerificationModel.fromMap(doc.data()))
+          .toList();
+    });
   }
 
   /// Verify a skill (admin/reviewer function requiring Custom Claims)

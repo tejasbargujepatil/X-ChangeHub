@@ -4,9 +4,13 @@ import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
 import '../../models/mentor_metrics_model.dart';
 import '../../services/mentor_quality_service.dart';
+import '../../services/enhancement_services.dart';
 import '../portfolio/portfolio_view_screen.dart';
 import 'edit_profile_screen.dart';
 import 'privacy_policy_screen.dart';
+import 'request_verification_dialog.dart';
+import '../../widgets/verified_certificate_dialog.dart';
+import '../admin/skill_verifications_admin_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -139,6 +143,8 @@ class ProfileScreen extends StatelessWidget {
               user.skillsToTeach,
               AppTheme.primaryColor,
               verifiedSkills: user.verifiedSkills,
+              userId: user.uid,
+              userName: user.fullName,
             ),
 
             _buildSection(
@@ -146,6 +152,8 @@ class ProfileScreen extends StatelessWidget {
               'Skills I Want to Learn',
               user.skillsToLearn,
               AppTheme.secondaryColor,
+              userId: user.uid,
+              userName: user.fullName,
             ),
 
             // Achievements Section
@@ -211,9 +219,62 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
 
+            // Request Skill Verification Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => RequestVerificationDialog(
+                      userId: user.uid,
+                      availableSkills: user.skillsToTeach,
+                      verifiedSkills: user.verifiedSkills,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.verified),
+                label: const Text('Request Skill Verification'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.successColor,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+            ),
+
+            // Reviewer Verification Portal Button (only visible if reviewer/admin)
+            FutureBuilder<bool>(
+              future: VerificationService().isReviewer(),
+              builder: (context, snapshot) {
+                if (snapshot.data == true) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SkillVerificationsAdminScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.gavel),
+                      label: const Text('Reviewer Verification Portal'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        foregroundColor: AppTheme.primaryColor,
+                        side: const BorderSide(color: AppTheme.primaryColor),
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+
             // Privacy Policy Button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               child: OutlinedButton.icon(
                 onPressed: () {
                   Navigator.push(
@@ -272,6 +333,8 @@ class ProfileScreen extends StatelessWidget {
     List<String> items,
     Color color, {
     List<String> verifiedSkills = const [],
+    String? userId,
+    String? userName,
   }) {
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -298,7 +361,7 @@ class ProfileScreen extends StatelessWidget {
               runSpacing: 8,
               children: items.map((skill) {
                 final isVerified = verifiedSkills.contains(skill);
-                return Chip(
+                final chipWidget = Chip(
                   avatar: isVerified
                       ? const Icon(Icons.verified, size: 16, color: AppTheme.successColor)
                       : null,
@@ -311,6 +374,25 @@ class ProfileScreen extends StatelessWidget {
                     fontWeight: isVerified ? FontWeight.bold : FontWeight.w500,
                   ),
                 );
+
+                if (isVerified && userId != null && userName != null) {
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => VerifiedCertificateDialog(
+                          userId: userId,
+                          userName: userName,
+                          skill: skill,
+                        ),
+                      );
+                    },
+                    child: chipWidget,
+                  );
+                }
+
+                return chipWidget;
               }).toList(),
             ),
         ],

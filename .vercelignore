@@ -1,0 +1,10 @@
+build/*
+!build/web
+android/
+ios/
+windows/
+macos/
+linux/
+functions/node_modules/
+.dart_tool/
+.git/
